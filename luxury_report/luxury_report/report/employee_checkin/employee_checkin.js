@@ -43,4 +43,7 @@ frappe.query_reports["Employee Checkin"] = {
 			default: "All",
 		},
 	],
+	get_datatable_options(options) {
+		return Object.assign(options, { cellHeight: 70 });
+	},
 };
