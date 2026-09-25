@@ -16,6 +16,7 @@ def execute(filters: dict | None = None):
 
 def get_columns() -> list[dict]:
 	return [
+		{"label": _("Employee Checkin Code"), "fieldname": "name", "fieldtype": "Link", "options": "Employee Checkin", "width": 170},
 		{"label": _("Employee Code"), "fieldname": "employee", "fieldtype": "Link", "options": "Employee", "width": 150},
 		{"label": _("Employee Name"), "fieldname": "employee_name", "fieldtype": "Data", "width": 180},
 		{"label": _("Time"), "fieldname": "time", "fieldtype": "Datetime", "width": 160},
