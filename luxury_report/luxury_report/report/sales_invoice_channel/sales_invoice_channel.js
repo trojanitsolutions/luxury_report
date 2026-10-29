@@ -100,6 +100,8 @@ frappe.query_reports["Sales Invoice Channel"] = {
 			fieldtype: "Select",
 			options: ["20", "100", "500", "2500"],
 			default: "20",
+			// set from the paging area under the table
+			hidden: 1,
 			on_change: sic_reset_pages,
 		},
 		{
@@ -121,10 +123,7 @@ frappe.query_reports["Sales Invoice Channel"] = {
 			},
 		});
 
-		report.sic_load_more = report.page.add_inner_button(__("Load More"), () => {
-			const page_count = cint(report.get_filter_value("page_count")) || 1;
-			report.set_filter_value("page_count", page_count + 1);
-		});
+		sic_setup_paging_area(report);
 
 		report.page.add_inner_button(__("Download Excel"), () => {
 			const filters_json = JSON.stringify(report.get_filter_values());
@@ -137,16 +136,55 @@ frappe.query_reports["Sales Invoice Channel"] = {
 	},
 
 	after_refresh: function (report) {
-		if (!report.sic_load_more) return;
+		const $paging_area = report.sic_paging_area;
+		if (!$paging_area) return;
 
 		const summary = (report.raw_data && report.raw_data.report_summary) || [];
 		const count_card = summary.find((card) => card.key === "invoice_count");
 		const total = count_card ? count_card.value : 0;
 		const loaded = (report.data || []).length;
-		const has_more = loaded < total;
 
-		report.sic_load_more
-			.prop("disabled", !has_more)
-			.text(has_more ? __("Load More ({0} of {1})", [loaded, total]) : __("All {0} loaded", [loaded]));
+		$paging_area.toggle(loaded > 0);
+		$paging_area.find(".sic-count").text(__("{0} of {1}", [loaded, total]));
+		$paging_area.find(".btn-more").toggle(loaded < total);
 	},
 };
+
+// Page size pills and Load More under the table, laid out like the list view paging area
+function sic_setup_paging_area(report) {
+	if (report.sic_paging_area) return;
+
+	const $paging_area = $(
+		`<div class="list-paging-area level sic-paging-area">
+			<div class="level-left"></div>
+			<div class="level-right">
+				<span class="sic-count text-muted small mr-3"></span>
+			</div>
+		</div>`
+	)
+		.hide()
+		.insertAfter(report.$report);
+
+	const page_sizes = [20, 100, 500, 2500];
+	const page_size_buttons = new frappe.ui.TabButtons({
+		label: __("Page Size"),
+		options: page_sizes.map((value) => ({ label: String(value), value })),
+		value: cint(report.get_filter_value("page_size")) || page_sizes[0],
+		// the page_size filter's on_change goes back to page 1 and refreshes
+		on_change: (value) => report.set_filter_value("page_size", String(value)),
+	});
+	$paging_area.find(".level-left").append(page_size_buttons.$el);
+
+	$paging_area.find(".level-right").append(
+		frappe.ui.button({
+			label: __("Load More"),
+			css_class: "btn-more",
+			onclick: () => {
+				const page_count = cint(report.get_filter_value("page_count")) || 1;
+				report.set_filter_value("page_count", page_count + 1);
+			},
+		})
+	);
+
+	report.sic_paging_area = $paging_area;
+}
